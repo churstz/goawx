@@ -14,6 +14,7 @@ type AWX struct {
 	client *Client
 
 	ApplicationService                              *ApplicationService
+	RoleService                                     *RoleService
 	ExecutionEnvironmentsService                    *ExecutionEnvironmentsService
 	PingService                                     *PingService
 	InventoriesService                              *InventoriesService
@@ -23,6 +24,7 @@ type AWX struct {
 	JobTemplateNotificationTemplatesService         *JobTemplateNotificationTemplatesService
 	ProjectService                                  *ProjectService
 	ProjectUpdatesService                           *ProjectUpdatesService
+	TokenService                                    *TokenService
 	UserService                                     *UserService
 	GroupService                                    *GroupService
 	HostService                                     *HostService
@@ -223,8 +225,14 @@ func newAWX(c *Client) *AWX {
 			endpoint: fmt.Sprintf("%s%s", workflowJobTemplateNodeAPIEndpoint, "%d/always_nodes/"),
 			client:   c,
 		},
-		WorkflowJobTemplateNotificationTemplatesService: &WorkflowJobTemplateNotificationTemplatesService{
-			client: c,
-		},
+WorkflowJobTemplateNotificationTemplatesService: &WorkflowJobTemplateNotificationTemplatesService{
+client: c,
+},
+TokenService: &TokenService{
+client: c,
+},
+RoleService: &RoleService{
+client: c,
+},
 	}
 }
