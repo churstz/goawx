@@ -1,4 +1,4 @@
-FROM docker.pkg.github.com/nolte/vscode-devcontainers/k8s-operator:latest
+FROM ghcr.io/nolte/vscode-devcontainers/k8s-operator:latest
 
 # https://github.com/bflad/tfproviderdocs/releases
 ENV TFPROVIDERDOCS_VERSION=0.7.0
@@ -8,10 +8,10 @@ ENV BATS_VERSION=1.2.0
 
 USER root
 
-COPY --from=docker.pkg.github.com/nolte/vscode-devcontainers/devops:latest /usr/local/bin/swagger /usr/local/bin/swagger
-COPY --from=docker.pkg.github.com/nolte/vscode-devcontainers/devops:latest /usr/local/bin/terraform /usr/local/bin/terraform
-COPY --from=docker.pkg.github.com/nolte/vscode-devcontainers/devops:latest /usr/local/bin/terraform-doc  /usr/local/bin/terraform-doc
-COPY --from=docker.pkg.github.com/nolte/vscode-devcontainers/devops:latest /usr/local/bin/shellcheck  /usr/local/bin/shellcheck
+COPY --from=ghcr.io/nolte/vscode-devcontainers/devops:latest /usr/local/bin/swagger /usr/local/bin/swagger
+COPY --from=ghcr.io/nolte/vscode-devcontainers/devops:latest /usr/local/bin/terraform /usr/local/bin/terraform
+COPY --from=ghcr.io/nolte/vscode-devcontainers/devops:latest /usr/local/bin/terraform-doc  /usr/local/bin/terraform-doc
+COPY --from=ghcr.io/nolte/vscode-devcontainers/devops:latest /usr/local/bin/shellcheck  /usr/local/bin/shellcheck
 
 RUN curl -sSL -k https://github.com/bflad/tfproviderdocs/releases/download/v${TFPROVIDERDOCS_VERSION}/tfproviderdocs_${TFPROVIDERDOCS_VERSION}_linux_amd64.tar.gz -o /tmp/tfproviderdocs.tgz \
     && tar -zxf /tmp/tfproviderdocs.tgz -C /tmp \
@@ -26,7 +26,7 @@ RUN mkdir -p /go/src && chown -R ${USER_UID}:${USER_GID} /go/src \
 
 RUN curl -sSL -k https://github.com/goreleaser/goreleaser/releases/download/v0.141.0/goreleaser_Linux_x86_64.tar.gz -o /tmp/goreleaser.tgz \
     && tar -zxf /tmp/goreleaser.tgz -C /tmp \
-    && mv /tmp/goreleaser /usr/local/bin/
+    && mv /tmp/goreleaser /usr/local/bin/33
 
 
 USER ${USERNAME}
