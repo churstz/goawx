@@ -129,6 +129,7 @@ func (p *OrganizationsService) AssociateInstanceGroups(id int, data map[string]i
 	return p.associate(id, "instance_groups", data, params)
 }
 
+// Organization "Related" Resources.  For us when adding or removing an existing resource to/from an organization using POST and an ID
 // Associate associate an element to Organization.
 func (p *OrganizationsService) associate(id int, typ string, data map[string]interface{}, params map[string]string) (*Organization, error) {
 	result := new(Organization)
@@ -184,8 +185,7 @@ func (p *OrganizationsService) disAssociate(id int, typ string, data map[string]
 	return result, nil
 }
 
-// Must be replaced by a generic function
-// But upgrade to version go 1.18 before
+// getAllPages retrieves all pages for organization list requests
 func (p *OrganizationsService) getAllPages(firstURL string, params map[string]string) ([]*Organization, error) {
 	results := make([]*Organization, 0)
 	nextURL := firstURL
@@ -224,4 +224,91 @@ func (p *OrganizationsService) getAllPages(firstURL string, params map[string]st
 		nextURL = result.Next.(string)
 	}
 	return results, nil
+}
+
+//#########################################
+//Free Functions for Organization Resources
+// (not part of the OrganizationsService struct)
+//#########################################
+
+func getOrganizationAllResourcePages[T any](p *OrganizationsService, firstURL string, params map[string]string) ([]*T, error) {
+	results := make([]*T, 0)
+	nextURL := firstURL
+	for {
+		nextURLParsed, err := url.Parse(nextURL)
+		if err != nil {
+			return nil, err
+		}
+
+		nextURLQueryParams := make(map[string]string)
+		for paramName, paramValues := range nextURLParsed.Query() {
+			if len(paramValues) > 0 {
+				nextURLQueryParams[paramName] = paramValues[0]
+			}
+		}
+
+		for paramName, paramValue := range params {
+			nextURLQueryParams[paramName] = paramValue
+		}
+
+		result := new(PaginatedResponse[T])
+		resp, err := p.client.Requester.GetJSON(nextURLParsed.Path, result, nextURLQueryParams)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := CheckResponse(resp); err != nil {
+			return nil, err
+		}
+
+		results = append(results, result.Results...)
+
+		if result.Next == nil || result.Next.(string) == "" {
+			break
+		}
+		nextURL = result.Next.(string)
+	}
+	return results, nil
+}
+
+func listOrganizationResource[T any](p *OrganizationsService, orgID int, resourceType string, params map[string]string) ([]*T, error) {
+	endpoint := fmt.Sprintf("%s%d/%s/", organizationsAPIEndpoint, orgID, resourceType)
+
+	results, err := getOrganizationAllResourcePages[T](p, endpoint, params)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func createOrganizationResource[T any](p *OrganizationsService, orgID int, resourceType string, data map[string]interface{}, mandatoryFields []string) (*T, error) {
+	validate, status := ValidateParams(data, mandatoryFields)
+	if !status {
+		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
+
+	result := new(T)
+	endpoint := fmt.Sprintf("%s%d/%s/", organizationsAPIEndpoint, orgID, resourceType)
+
+	// Add organization ID to data if not present
+	if _, ok := data["organization"]; !ok {
+		data["organization"] = orgID
+	}
+
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

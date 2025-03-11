@@ -1,85 +1,34 @@
 package awx
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-)
+const organizationAdmins = "admins"
 
-const organizationAdminsAPIEndpoint = "/api/v2/organizations/%d/admins/"
-
-// OrganizationAdminResponse represents the admins list response
-type OrganizationAdminResponse = PaginatedResponse[User]
-
-// ListOrganizationAdmins shows list of admin users for an organization.
 func (o *OrganizationsService) ListOrganizationAdmins(id int, params map[string]string) ([]*User, error) {
-	result := new(OrganizationAdminResponse)
-	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, id)
+	return listOrganizationResource[User](o, id, organizationAdmins, params)
+}
 
-	resp, err := o.client.Requester.GetJSON(endpoint, result, params)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := CheckResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return result.Results, nil
+func (o *OrganizationsService) CreateOrganizationAdmin(orgID int, data map[string]interface{}) (*User, error) {
+	mandatoryFields := []string{"username", "email"}
+	return createOrganizationResource[User](o, orgID, organizationAdmins, data, mandatoryFields)
 }
 
 // AssociateOrganizationAdmin makes a user an admin of the organization
-func (o *OrganizationsService) AssociateOrganizationAdmin(organizationID int, userID int) ([]*User, error) {
-	result := new(OrganizationAdminResponse)
-	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, organizationID)
-
+func (o *OrganizationsService) AssociateOrganizationAdmin(organizationID int, adminID int) error {
 	data := map[string]interface{}{
-		"id":        userID,
-		"associate": true,
+		"id": adminID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := CheckResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return result.Results, nil
+	_, err := o.associate(organizationID, organizationAdmins, data, nil)
+	return err
 }
 
 // DisassociateOrganizationAdmin removes a user's admin role from the organization
-func (o *OrganizationsService) DisassociateOrganizationAdmin(organizationID int, userID int) ([]*User, error) {
-	result := new(OrganizationAdminResponse)
-	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, organizationID)
-
+func (o *OrganizationsService) DisassociateOrganizationAdmin(organizationID int, adminID int) error {
 	data := map[string]interface{}{
-		"id":           userID,
-		"disassociate": true,
+		"id": adminID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := CheckResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return result.Results, nil
+	_, err := o.disAssociate(organizationID, organizationAdmins, data, nil)
+	return err
 }
 
 // IsOrganizationAdmin checks if a specific user is an admin of the organization

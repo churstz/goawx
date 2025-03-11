@@ -14,6 +14,14 @@ type Pagination struct {
 	Count    int         `json:"count"`
 	Next     interface{} `json:"next"`
 	Previous interface{} `json:"previous"`
+	// NextPage string      `json:"next_page"`
+	// PrevPage string      `json:"prev_page"`
+}
+
+// PaginatedResponse represents a generic paginated response with results of type T
+type PaginatedResponse[T any] struct {
+	Pagination
+	Results []*T `json:"results"`
 }
 
 type PaginationRequest struct {

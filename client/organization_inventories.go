@@ -1,62 +1,19 @@
 package awx
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-)
-
-const organizationInventoriesAPIEndpoint = "/api/v2/organizations/%d/inventories/"
+const organizationInventories = "inventories"
 
 // OrganizationInventoryResponse represents the inventories list response
 type OrganizationInventoryResponse = PaginatedResponse[Inventory]
 
 // ListOrganizationInventories shows list of inventories in an organization.
 func (o *OrganizationsService) ListOrganizationInventories(id int, params map[string]string) ([]*Inventory, error) {
-	result := new(OrganizationInventoryResponse)
-	endpoint := fmt.Sprintf(organizationInventoriesAPIEndpoint, id)
-
-	resp, err := o.client.Requester.GetJSON(endpoint, result, params)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := CheckResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return result.Results, nil
+	return listOrganizationResource[Inventory](o, id, organizationInventories, params)
 }
 
 // CreateOrganizationInventory creates an inventory in the specified organization.
-func (o *OrganizationsService) CreateOrganizationInventory(id int, data map[string]interface{}, params map[string]string) (*Inventory, error) {
+func (o *OrganizationsService) CreateOrganizationInventory(id int, data map[string]interface{}) (*Inventory, error) {
 	mandatoryFields := []string{"name"}
-	validate, status := ValidateParams(data, mandatoryFields)
-	if !status {
-		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
-		return nil, err
-	}
-
-	// Ensure the organization field is set to the correct ID
-	data["organization"] = id
-
-	result := new(Inventory)
-	endpoint := fmt.Sprintf(organizationInventoriesAPIEndpoint, id)
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, params)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := CheckResponse(resp); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return createOrganizationResource[Inventory](o, id, organizationInventories, data, mandatoryFields)
 }
 
 // AssociateInventoryWithOrganization associates an existing inventory with an organization
@@ -65,7 +22,7 @@ func (o *OrganizationsService) AssociateInventoryWithOrganization(organizationID
 		"id": inventoryID,
 	}
 
-	_, err := o.associate(organizationID, "inventories", data, nil)
+	_, err := o.associate(organizationID, organizationInventories, data, nil)
 	return err
 }
 
@@ -75,6 +32,6 @@ func (o *OrganizationsService) DisassociateInventoryFromOrganization(organizatio
 		"id": inventoryID,
 	}
 
-	_, err := o.disAssociate(organizationID, "inventories", data, nil)
+	_, err := o.disAssociate(organizationID, organizationInventories, data, nil)
 	return err
 }

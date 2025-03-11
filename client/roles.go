@@ -1,445 +1,409 @@
 package awx
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/url"
 )
 
 const (
-    // Resource Types
-    ResourceTypeProject      = "projects"
-    ResourceTypeInventory   = "inventories"
-    ResourceTypeJobTemplate = "job_templates"
-    ResourceTypeWorkflow    = "workflow_job_templates"
-    ResourceTypeCredential  = "credentials"
+	// Resource Types
+	ResourceTypeProject     = "projects"
+	ResourceTypeInventory   = "inventories"
+	ResourceTypeJobTemplate = "job_templates"
+	ResourceTypeWorkflow    = "workflow_job_templates"
+	ResourceTypeCredential  = "credentials"
 )
 
 // RoleService implements role management operations
 type RoleService struct {
-    client *Client
+	client *Client
 }
 
 // RoleSummaryFields represents summary fields in role response
 type RoleSummaryFields struct {
-    ResourceName           string `json:"resource_name"`
-    ResourceType          string `json:"resource_type"`
-    ResourceTypeDisplayName string `json:"resource_type_display_name"`
-    ResourceID           int    `json:"resource_id"`
+	ResourceName            string `json:"resource_name"`
+	ResourceType            string `json:"resource_type"`
+	ResourceTypeDisplayName string `json:"resource_type_display_name"`
+	ResourceID              int    `json:"resource_id"`
 }
 
 // Role represents an AWX role
 type Role struct {
-    ID            int               `json:"id"`
-    Type          string           `json:"type"`
-    URL           string           `json:"url"`
-    Related       map[string]string `json:"related"`
-    SummaryFields RoleSummaryFields `json:"summary_fields"`
-    Name          string           `json:"name"`
-    Description   string           `json:"description"`
+	ID            int               `json:"id"`
+	Type          string            `json:"type"`
+	URL           string            `json:"url"`
+	Related       map[string]string `json:"related"`
+	SummaryFields RoleSummaryFields `json:"summary_fields"`
+	Name          string            `json:"name"`
+	Description   string            `json:"description"`
 }
 
 // RoleListResponse represents the roles list response
-type RoleListResponse struct {
-    Pagination
-    Results []*Role `json:"results"`
-}
+type RoleListResponse = PaginatedResponse[Role]
+
+const rolesAPIEndpoint = "/api/v2/roles/"
 
 // ListRoles retrieves a list of all roles with pagination
-func (r *RoleService) ListRoles(params map[string]string) (*RoleListResponse, error) {
-    result := new(RoleListResponse)
-    endpoint := "/api/v2/roles/"
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
-
-    return result, nil
-}
-
-// ListAllRoles retrieves all roles by handling pagination automatically
-func (r *RoleService) ListAllRoles(params map[string]string) ([]*Role, error) {
-    if params == nil {
-        params = make(map[string]string)
-    }
-    
-    var roles []*Role
-    for {
-        result, err := r.ListRoles(params)
-        if err != nil {
-            return nil, err
-        }
-        roles = append(roles, result.Results...)
-        
-        if result.Next == "" {
-            break
-        }
-        params["page"] = result.NextPage
-    }
-    
-    return roles, nil
-}
-
-// GetProjectRoles lists all roles for a project with pagination
-func (r *RoleService) GetProjectRoles(projectID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceRoles(ResourceTypeProject, projectID, params)
-}
-
-// GetAllProjectRoles retrieves all roles for a project
-func (r *RoleService) GetAllProjectRoles(projectID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceRoles(ResourceTypeProject, projectID, params)
-}
-
-// GetInventoryRoles lists all roles for an inventory with pagination
-func (r *RoleService) GetInventoryRoles(inventoryID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceRoles(ResourceTypeInventory, inventoryID, params)
-}
-
-// GetAllInventoryRoles retrieves all roles for an inventory
-func (r *RoleService) GetAllInventoryRoles(inventoryID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceRoles(ResourceTypeInventory, inventoryID, params)
-}
-
-// GetJobTemplateRoles lists all roles for a job template with pagination
-func (r *RoleService) GetJobTemplateRoles(jobTemplateID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceRoles(ResourceTypeJobTemplate, jobTemplateID, params)
-}
-
-// GetAllJobTemplateRoles retrieves all roles for a job template
-func (r *RoleService) GetAllJobTemplateRoles(jobTemplateID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceRoles(ResourceTypeJobTemplate, jobTemplateID, params)
-}
-
-// GetWorkflowRoles lists all roles for a workflow job template with pagination
-func (r *RoleService) GetWorkflowRoles(workflowID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceRoles(ResourceTypeWorkflow, workflowID, params)
-}
-
-// GetAllWorkflowRoles retrieves all roles for a workflow job template
-func (r *RoleService) GetAllWorkflowRoles(workflowID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceRoles(ResourceTypeWorkflow, workflowID, params)
-}
-
-// GetCredentialRoles lists all roles for a credential with pagination
-func (r *RoleService) GetCredentialRoles(credentialID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceRoles(ResourceTypeCredential, credentialID, params)
-}
-
-// GetAllCredentialRoles retrieves all roles for a credential
-func (r *RoleService) GetAllCredentialRoles(credentialID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceRoles(ResourceTypeCredential, credentialID, params)
-}
-
-// GetProjectObjectRoles lists all object roles for a project with pagination
-func (r *RoleService) GetProjectObjectRoles(projectID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceObjectRoles(ResourceTypeProject, projectID, params)
-}
-
-// GetAllProjectObjectRoles retrieves all object roles for a project
-func (r *RoleService) GetAllProjectObjectRoles(projectID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceObjectRoles(ResourceTypeProject, projectID, params)
-}
-
-// GetInventoryObjectRoles lists all object roles for an inventory with pagination
-func (r *RoleService) GetInventoryObjectRoles(inventoryID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceObjectRoles(ResourceTypeInventory, inventoryID, params)
-}
-
-// GetAllInventoryObjectRoles retrieves all object roles for an inventory
-func (r *RoleService) GetAllInventoryObjectRoles(inventoryID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceObjectRoles(ResourceTypeInventory, inventoryID, params)
-}
-
-// GetJobTemplateObjectRoles lists all object roles for a job template with pagination
-func (r *RoleService) GetJobTemplateObjectRoles(jobTemplateID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceObjectRoles(ResourceTypeJobTemplate, jobTemplateID, params)
-}
-
-// GetAllJobTemplateObjectRoles retrieves all object roles for a job template
-func (r *RoleService) GetAllJobTemplateObjectRoles(jobTemplateID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceObjectRoles(ResourceTypeJobTemplate, jobTemplateID, params)
-}
-
-// GetWorkflowObjectRoles lists all object roles for a workflow job template with pagination
-func (r *RoleService) GetWorkflowObjectRoles(workflowID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceObjectRoles(ResourceTypeWorkflow, workflowID, params)
-}
-
-// GetAllWorkflowObjectRoles retrieves all object roles for a workflow job template
-func (r *RoleService) GetAllWorkflowObjectRoles(workflowID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceObjectRoles(ResourceTypeWorkflow, workflowID, params)
-}
-
-// GetCredentialObjectRoles lists all object roles for a credential with pagination
-func (r *RoleService) GetCredentialObjectRoles(credentialID int, params map[string]string) (*RoleListResponse, error) {
-    return r.GetResourceObjectRoles(ResourceTypeCredential, credentialID, params)
-}
-
-// GetAllCredentialObjectRoles retrieves all object roles for a credential
-func (r *RoleService) GetAllCredentialObjectRoles(credentialID int, params map[string]string) ([]*Role, error) {
-    return r.GetAllResourceObjectRoles(ResourceTypeCredential, credentialID, params)
-}
-
-// GetResourceRoles lists all roles for a given resource with pagination
-func (r *RoleService) GetResourceRoles(resourceType string, resourceID int, params map[string]string) (*RoleListResponse, error) {
-    result := new(RoleListResponse)
-    endpoint := fmt.Sprintf("/api/v2/%s/%d/roles/", resourceType, resourceID)
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
-
-    return result, nil
-}
-
-// GetAllResourceRoles retrieves all roles for a given resource by handling pagination automatically
-func (r *RoleService) GetAllResourceRoles(resourceType string, resourceID int, params map[string]string) ([]*Role, error) {
-    if params == nil {
-        params = make(map[string]string)
-    }
-    
-    var roles []*Role
-    for {
-        result, err := r.GetResourceRoles(resourceType, resourceID, params)
-        if err != nil {
-            return nil, err
-        }
-        roles = append(roles, result.Results...)
-        
-        if result.Next == "" {
-            break
-        }
-        params["page"] = result.NextPage
-    }
-    
-    return roles, nil
-}
-
-// GetResourceObjectRoles lists all object roles for a given resource with pagination
-func (r *RoleService) GetResourceObjectRoles(resourceType string, resourceID int, params map[string]string) (*RoleListResponse, error) {
-    result := new(RoleListResponse)
-    endpoint := fmt.Sprintf("/api/v2/%s/%d/object_roles/", resourceType, resourceID)
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
-
-    return result, nil
-}
-
-// GetAllResourceObjectRoles retrieves all object roles for a given resource by handling pagination automatically
-func (r *RoleService) GetAllResourceObjectRoles(resourceType string, resourceID int, params map[string]string) ([]*Role, error) {
-    if params == nil {
-        params = make(map[string]string)
-    }
-    
-    var roles []*Role
-    for {
-        result, err := r.GetResourceObjectRoles(resourceType, resourceID, params)
-        if err != nil {
-            return nil, err
-        }
-        roles = append(roles, result.Results...)
-        
-        if result.Next == "" {
-            break
-        }
-        params["page"] = result.NextPage
-    }
-    
-    return roles, nil
-}
-
-// AssignUserRole assigns a user to a role
-func (r *RoleService) AssignUserRole(roleID int, userID int) error {
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/users/", roleID)
-    data := map[string]interface{}{
-        "id": userID,
-    }
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
-
-    resp, err := r.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
-
-    return CheckResponse(resp)
-}
-
-// RemoveUserRole removes a user from a role
-func (r *RoleService) RemoveUserRole(roleID int, userID int) error {
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/users/", roleID)
-    data := map[string]interface{}{
-        "id": userID,
-        "disassociate": true,
-    }
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
-
-    resp, err := r.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
-
-    return CheckResponse(resp)
-}
-
-// AssignTeamRole assigns a team to a role
-func (r *RoleService) AssignTeamRole(roleID int, teamID int) error {
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/teams/", roleID)
-    data := map[string]interface{}{
-        "id": teamID,
-    }
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
-
-    resp, err := r.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
-
-    return CheckResponse(resp)
-}
-
-// RemoveTeamRole removes a team from a role
-func (r *RoleService) RemoveTeamRole(roleID int, teamID int) error {
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/teams/", roleID)
-    data := map[string]interface{}{
-        "id": teamID,
-        "disassociate": true,
-    }
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
-
-    resp, err := r.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
-
-    return CheckResponse(resp)
+func (r *RoleService) ListRoles(params map[string]string) ([]*Role, error) {
+	results, err := r.getAllPages(rolesAPIEndpoint, params)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 // GetRole retrieves a specific role by ID
-func (r *RoleService) GetRole(id int, params map[string]string) (*Role, error) {
-    result := new(Role)
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/", id)
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+func (r *RoleService) GetRoleByID(id int, params map[string]string) (*Role, error) {
+	result := new(Role)
+	endpoint := fmt.Sprintf("/api/v2/roles/%d/", id)
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	resp, err := r.client.Requester.GetJSON(endpoint, result, params)
+	if err != nil {
+		return nil, err
+	}
 
-    return result, nil
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-// ListRoleUsers retrieves the list of users that have this role with pagination
-func (r *RoleService) ListRoleUsers(id int, params map[string]string) (*UserListResponse, error) {
-    result := new(UserListResponse)
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/users/", id)
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+// CreateRole creates an awx Role
+func (p *RoleService) CreateRole(data map[string]interface{}, params map[string]string) (*Role, error) {
+	mandatoryFields = []string{"name"} //TODO: Check this
+	validate, status := ValidateParams(data, mandatoryFields)
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	if !status {
+		err := fmt.Errorf("Mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
 
-    return result, nil
+	result := new(Role)
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := p.client.Requester.PostJSON(rolesAPIEndpoint, bytes.NewReader(payload), result, params)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-// ListAllRoleUsers retrieves all users that have this role by handling pagination automatically
-func (r *RoleService) ListAllRoleUsers(id int, params map[string]string) ([]*User, error) {
-    if params == nil {
-        params = make(map[string]string)
-    }
-    
-    var users []*User
-    for {
-        result, err := r.ListRoleUsers(id, params)
-        if err != nil {
-            return nil, err
-        }
-        users = append(users, result.Results...)
-        
-        if result.Next == "" {
-            break
-        }
-        params["page"] = result.NextPage
-    }
-    
-    return users, nil
+// UpdateRole update an awx Role.
+func (p *RoleService) UpdateRole(id int, data map[string]interface{}, params map[string]string) (*Role, error) {
+	result := new(Role)
+	endpoint := fmt.Sprintf("%s%d", rolesAPIEndpoint, id)
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := p.client.Requester.PatchJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-// ListRoleTeams retrieves the list of teams that have this role with pagination
-func (r *RoleService) ListRoleTeams(id int, params map[string]string) (*TeamListResponse, error) {
-    result := new(TeamListResponse)
-    endpoint := fmt.Sprintf("/api/v2/roles/%d/teams/", id)
-    
-    resp, err := r.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+// DeleteRole delete an awx Organization.
+func (p *RoleService) DeleteRole(id int) (*Role, error) {
+	result := new(Role)
+	endpoint := fmt.Sprintf("%s%d", rolesAPIEndpoint, id)
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	resp, err := p.client.Requester.Delete(endpoint, result, nil)
+	if err != nil {
+		return nil, err
+	}
 
-    return result, nil
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
-// ListAllRoleTeams retrieves all teams that have this role by handling pagination automatically
-func (r *RoleService) ListAllRoleTeams(id int, params map[string]string) ([]*Team, error) {
-    if params == nil {
-        params = make(map[string]string)
-    }
-    
-    var teams []*Team
-    for {
-        result, err := r.ListRoleTeams(id, params)
-        if err != nil {
-            return nil, err
-        }
-        teams = append(teams, result.Results...)
-        
-        if result.Next == "" {
-            break
-        }
-        params["page"] = result.NextPage
-    }
-    
-    return teams, nil
+// Organization "Related" Resources.  For us when adding or removing an existing resource to/from an organization using POST and an ID
+// Associate associate an element to Role.
+func (p *RoleService) associate(id int, typ string, data map[string]interface{}, params map[string]string) (*Role, error) {
+	result := new(Role)
+
+	endpoint := fmt.Sprintf("%s%d/%s/", rolesAPIEndpoint, id, typ)
+	data["associate"] = true
+	mandatoryFields = []string{"id"}
+	validate, status := ValidateParams(data, mandatoryFields)
+	if !status {
+		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// DisAssociate remove element from a role
+func (p *RoleService) disAssociate(id int, typ string, data map[string]interface{}, params map[string]string) (*Role, error) {
+	result := new(Role)
+	endpoint := fmt.Sprintf("%s%d/%s/", rolesAPIEndpoint, id, typ)
+	data["disassociate"] = true
+	mandatoryFields = []string{"id", "disassociate"}
+	validate, status := ValidateParams(data, mandatoryFields)
+	if !status {
+		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (p *RoleService) getAllPages(firstURL string, params map[string]string) ([]*Role, error) {
+	results := make([]*Role, 0)
+	nextURL := firstURL
+	for {
+		nextURLParsed, err := url.Parse(nextURL)
+		if err != nil {
+			return nil, err
+		}
+
+		nextURLQueryParams := make(map[string]string)
+		for paramName, paramValues := range nextURLParsed.Query() {
+			if len(paramValues) > 0 {
+				nextURLQueryParams[paramName] = paramValues[0]
+			}
+		}
+
+		for paramName, paramValue := range params {
+			nextURLQueryParams[paramName] = paramValue
+		}
+
+		result := new(PaginatedResponse[Role])
+		resp, err := p.client.Requester.GetJSON(nextURLParsed.Path, result, nextURLQueryParams)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := CheckResponse(resp); err != nil {
+			return nil, err
+		}
+
+		results = append(results, result.Results...)
+
+		if result.Next == nil || result.Next.(string) == "" {
+			break
+		}
+		nextURL = result.Next.(string)
+	}
+	return results, nil
+}
+
+// #########################################
+const roleTeams = "teams"
+
+func (r *RoleService) ListRoleTeams(id int, params map[string]string) ([]*Team, error) {
+	return listRoleResource[Team](r, id, roleTeams, params)
+}
+
+func (r *RoleService) CreateRoleTeam(id int, data map[string]interface{}) (*Team, error) {
+	mandatoryFields := []string{"name"}
+	return createRoleResource[Team](r, id, roleTeams, data, mandatoryFields)
+}
+
+func (r *RoleService) AssociateTeamWithRole(roleID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.associate(roleID, roleTeams, data, nil)
+	return err
+}
+
+func (r *RoleService) DisassociateTeamFromRole(roleID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.disAssociate(roleID, roleTeams, data, nil)
+	return err
+}
+
+// #########################################
+const roleUsers = "users"
+
+func (r *RoleService) ListRoleUsers(id int, params map[string]string) ([]*User, error) {
+	return listRoleResource[User](r, id, roleUsers, params)
+}
+
+func (r *RoleService) CreateRoleUser(id int, data map[string]interface{}) (*User, error) {
+	mandatoryFields := []string{"name"}
+	return createRoleResource[User](r, id, roleUsers, data, mandatoryFields)
+}
+
+func (r *RoleService) AssociateUserithRole(roleID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.associate(roleID, roleUsers, data, nil)
+	return err
+}
+
+func (r *RoleService) DisassociateUserFromRole(roleID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.disAssociate(roleID, roleUsers, data, nil)
+	return err
+}
+
+// #########################################
+const roleJobTemplate = "job_templates"
+
+func (r *RoleService) ListRoleJobTemplates(id int, params map[string]string) ([]*JobTemplate, error) {
+	return listRoleResource[JobTemplate](r, id, roleJobTemplate, params)
+}
+
+func (r *RoleService) CreateRoleJobTemplate(id int, data map[string]interface{}) (*JobTemplate, error) {
+	mandatoryFields := []string{"name"}
+	return createRoleResource[JobTemplate](r, id, roleJobTemplate, data, mandatoryFields)
+}
+
+func (r *RoleService) AssociateJobTemplateWithRole(jobTemplateID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.associate(jobTemplateID, roleJobTemplate, data, nil)
+	return err
+}
+
+func (r *RoleService) DisassociateJobTemplateFromRole(jobTemplateID int, teamID int) error {
+	data := map[string]interface{}{
+		"id": teamID,
+	}
+
+	_, err := r.disAssociate(jobTemplateID, roleJobTemplate, data, nil)
+	return err
+}
+
+//#########################################
+//Free Functions for Role Resources
+// (not part of the RoleService struct)
+//#########################################
+
+func getRolesAllResourcePages[T any](p *RoleService, firstURL string, params map[string]string) ([]*T, error) {
+	results := make([]*T, 0)
+	nextURL := firstURL
+	for {
+		nextURLParsed, err := url.Parse(nextURL)
+		if err != nil {
+			return nil, err
+		}
+
+		nextURLQueryParams := make(map[string]string)
+		for paramName, paramValues := range nextURLParsed.Query() {
+			if len(paramValues) > 0 {
+				nextURLQueryParams[paramName] = paramValues[0]
+			}
+		}
+
+		for paramName, paramValue := range params {
+			nextURLQueryParams[paramName] = paramValue
+		}
+
+		result := new(PaginatedResponse[T])
+		resp, err := p.client.Requester.GetJSON(nextURLParsed.Path, result, nextURLQueryParams)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := CheckResponse(resp); err != nil {
+			return nil, err
+		}
+
+		results = append(results, result.Results...)
+
+		if result.Next == nil || result.Next.(string) == "" {
+			break
+		}
+		nextURL = result.Next.(string)
+	}
+	return results, nil
+}
+
+func listRoleResource[T any](p *RoleService, roleID int, resourceType string, params map[string]string) ([]*T, error) {
+	endpoint := fmt.Sprintf("%s%d/%s/", rolesAPIEndpoint, roleID, resourceType)
+
+	results, err := getRolesAllResourcePages[T](p, endpoint, params)
+	if err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func createRoleResource[T any](p *RoleService, roleID int, resourceType string, data map[string]interface{}, mandatoryFields []string) (*T, error) {
+	validate, status := ValidateParams(data, mandatoryFields)
+	if !status {
+		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
+
+	result := new(T)
+	endpoint := fmt.Sprintf("%s%d/%s/", rolesAPIEndpoint, roleID, resourceType)
+
+	// Add role ID to data if not present
+	if _, ok := data["role"]; !ok {
+		data["role"] = roleID
+	}
+
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
