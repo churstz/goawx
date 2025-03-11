@@ -70,37 +70,16 @@ func (o *OrganizationsService) AssociateUserWithOrganization(organizationID int,
 		"id": userID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationUsersAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "users", data, nil)
+	return err
 }
 
 // DisassociateUserFromOrganization removes a user's association with an organization
 func (o *OrganizationsService) DisassociateUserFromOrganization(organizationID int, userID int) error {
 	data := map[string]interface{}{
-		"id":           userID,
-		"disassociate": true,
+		"id": userID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationUsersAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "users", data, nil)
+	return err
 }

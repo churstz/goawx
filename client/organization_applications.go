@@ -65,37 +65,16 @@ func (o *OrganizationsService) AssociateApplicationWithOrganization(organization
 		"id": applicationID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationApplicationsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "applications", data, nil)
+	return err
 }
 
 // DisassociateApplicationFromOrganization removes an application's association with an organization
 func (o *OrganizationsService) DisassociateApplicationFromOrganization(organizationID int, applicationID int) error {
 	data := map[string]interface{}{
-		"id":           applicationID,
-		"disassociate": true,
+		"id": applicationID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationApplicationsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "applications", data, nil)
+	return err
 }

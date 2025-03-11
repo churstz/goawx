@@ -65,37 +65,16 @@ func (o *OrganizationsService) AssociateInventoryWithOrganization(organizationID
 		"id": inventoryID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationInventoriesAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "inventories", data, nil)
+	return err
 }
 
 // DisassociateInventoryFromOrganization removes an inventory's association with an organization
 func (o *OrganizationsService) DisassociateInventoryFromOrganization(organizationID int, inventoryID int) error {
 	data := map[string]interface{}{
-		"id":           inventoryID,
-		"disassociate": true,
+		"id": inventoryID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationInventoriesAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "inventories", data, nil)
+	return err
 }

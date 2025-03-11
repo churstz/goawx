@@ -12,26 +12,23 @@ type ExecutionEnvironmentsService struct {
 }
 
 // ListExecutionEnvironmentsResponse represents `ListExecutionEnvironments` endpoint response.
-type ListExecutionEnvironmentsResponse struct {
-	Pagination
-	Results []*ExecutionEnvironment `json:"results"`
-}
+type ListExecutionEnvironmentsResponse = PaginatedResponse[ExecutionEnvironment]
 
 const executionEnvironmentsAPIEndpoint = "/api/v2/execution_environments/"
 
 // ListExecutionEnvironments shows list of awx execution environments.
-func (p *ExecutionEnvironmentsService) ListExecutionEnvironments(params map[string]string) ([]*ExecutionEnvironment, *ListExecutionEnvironmentsResponse, error) {
+func (p *ExecutionEnvironmentsService) ListExecutionEnvironments(params map[string]string) ([]*ExecutionEnvironment, error) {
 	result := new(ListExecutionEnvironmentsResponse)
 	resp, err := p.client.Requester.GetJSON(executionEnvironmentsAPIEndpoint, result, params)
 	if err != nil {
-		return nil, result, err
+		return nil, err
 	}
 
 	if err := CheckResponse(resp); err != nil {
-		return nil, result, err
+		return nil, err
 	}
 
-	return result.Results, result, nil
+	return result.Results, nil
 }
 
 // GetExecutionEnvironmentByID shows the details of a ExecutionEnvironment.
@@ -52,7 +49,7 @@ func (p *ExecutionEnvironmentsService) GetExecutionEnvironmentByID(id int, param
 
 // CreateExecutionEnvironment creates an awx ExecutionEnvironment.
 func (p *ExecutionEnvironmentsService) CreateExecutionEnvironment(data map[string]interface{}, params map[string]string) (*ExecutionEnvironment, error) {
-	mandatoryFields = []string{"name", "image"}
+	mandatoryFields := []string{"name", "image"}
 	validate, status := ValidateParams(data, mandatoryFields)
 
 	if !status {

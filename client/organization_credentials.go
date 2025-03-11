@@ -68,39 +68,18 @@ func (o *OrganizationsService) AssociateCredentialWithOrganization(organizationI
 		"id": credentialID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationCredentialsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "credentials", data, nil)
+	return err
 }
 
 // DisassociateCredentialFromOrganization removes a credential's association with an organization
 func (o *OrganizationsService) DisassociateCredentialFromOrganization(organizationID int, credentialID int) error {
 	data := map[string]interface{}{
-		"id":           credentialID,
-		"disassociate": true,
+		"id": credentialID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationCredentialsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "credentials", data, nil)
+	return err
 }
 
 // GetOrganizationCredentialInputSources retrieves the input sources for a credential

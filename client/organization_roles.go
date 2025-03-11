@@ -61,43 +61,20 @@ func (o *OrganizationsService) CreateOrganizationObjectRole(id int, data map[str
 
 // AssociateRoleWithOrganization associates an existing role with an organization
 func (o *OrganizationsService) AssociateRoleWithOrganization(organizationID int, roleID int) error {
-	endpoint := fmt.Sprintf(organizationObjectRolesAPIEndpoint, organizationID)
-
 	data := map[string]interface{}{
 		"id": roleID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "roles", data, nil)
+	return err
 }
 
-// RemoveRoleFromOrganization removes a role's association with an organization
-func (o *OrganizationsService) RemoveRoleFromOrganization(organizationID int, roleID int) error {
-	endpoint := fmt.Sprintf(organizationObjectRolesAPIEndpoint, organizationID)
-
+// DisassociateRoleFromOrganization removes a role's association with an organization
+func (o *OrganizationsService) DisassociateRoleFromOrganization(organizationID int, roleID int) error {
 	data := map[string]interface{}{
-		"id":           roleID,
-		"disassociate": true,
+		"id": roleID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "roles", data, nil)
+	return err
 }

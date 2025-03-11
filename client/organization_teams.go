@@ -68,37 +68,16 @@ func (o *OrganizationsService) AssociateTeamWithOrganization(organizationID int,
 		"id": teamID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationTeamsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "teams", data, nil)
+	return err
 }
 
 // DisassociateTeamFromOrganization removes a team's association with an organization
 func (o *OrganizationsService) DisassociateTeamFromOrganization(organizationID int, teamID int) error {
 	data := map[string]interface{}{
-		"id":           teamID,
-		"disassociate": true,
+		"id": teamID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationTeamsAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "teams", data, nil)
+	return err
 }

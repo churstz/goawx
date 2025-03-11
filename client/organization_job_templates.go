@@ -65,37 +65,16 @@ func (o *OrganizationsService) AssociateJobTemplateWithOrganization(organization
 		"id": templateID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.associate(organizationID, "job_templates", data, nil)
+	return err
 }
 
 // DisassociateJobTemplateFromOrganization removes a job template's association with an organization
 func (o *OrganizationsService) DisassociateJobTemplateFromOrganization(organizationID int, templateID int) error {
 	data := map[string]interface{}{
-		"id":           templateID,
-		"disassociate": true,
+		"id": templateID,
 	}
 
-	payload, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-
-	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, organizationID)
-	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-	if err != nil {
-		return err
-	}
-
-	return CheckResponse(resp)
+	_, err := o.disAssociate(organizationID, "job_templates", data, nil)
+	return err
 }
