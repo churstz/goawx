@@ -12,10 +12,7 @@ type InventoriesService struct {
 }
 
 // ListInventoriesResponse represents `ListInventories` endpoint response.
-type ListInventoriesResponse struct {
-	Pagination
-	Results []*Inventory `json:"results"`
-}
+type ListInventoriesResponse = PaginatedResponse[Inventory]
 
 const inventoriesAPIEndpoint = "/api/v2/inventories/"
 

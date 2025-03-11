@@ -1,88 +1,99 @@
 package awx
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
+	"bytes"
+	"encoding/json"
+	"fmt"
 )
 
+const organizationAdminsAPIEndpoint = "/api/v2/organizations/%d/admins/"
+
 // OrganizationAdminResponse represents the admins list response
-type OrganizationAdminResponse struct {
-    Pagination
-    Results []*User `json:"results"` // Using the base User type since these are user objects
-}
+type OrganizationAdminResponse = PaginatedResponse[User]
 
 // ListOrganizationAdmins shows list of admin users for an organization.
-func (p *OrganizationsService) ListOrganizationAdmins(id int, params map[string]string) ([]*User, error) {
-    result := new(OrganizationAdminResponse)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/admins/", id)
-    
-    resp, err := p.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+func (o *OrganizationsService) ListOrganizationAdmins(id int, params map[string]string) ([]*User, error) {
+	result := new(OrganizationAdminResponse)
+	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, id)
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	resp, err := o.client.Requester.GetJSON(endpoint, result, params)
+	if err != nil {
+		return nil, err
+	}
 
-    return result.Results, nil
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result.Results, nil
 }
 
 // AssociateOrganizationAdmin makes a user an admin of the organization
-func (p *OrganizationsService) AssociateOrganizationAdmin(organizationID int, userID int) error {
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/admins/", organizationID)
-    data := map[string]interface{}{
-        "id": userID,
-        "associate": true,
-    }
+func (o *OrganizationsService) AssociateOrganizationAdmin(organizationID int, userID int) ([]*User, error) {
+	result := new(OrganizationAdminResponse)
+	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, organizationID)
 
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
+	data := map[string]interface{}{
+		"id":        userID,
+		"associate": true,
+	}
 
-    resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
 
-    return CheckResponse(resp)
+	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result.Results, nil
 }
 
 // DisassociateOrganizationAdmin removes a user's admin role from the organization
-func (p *OrganizationsService) DisassociateOrganizationAdmin(organizationID int, userID int) error {
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/admins/", organizationID)
-    data := map[string]interface{}{
-        "id": userID,
-        "disassociate": true,
-    }
+func (o *OrganizationsService) DisassociateOrganizationAdmin(organizationID int, userID int) ([]*User, error) {
+	result := new(OrganizationAdminResponse)
+	endpoint := fmt.Sprintf(organizationAdminsAPIEndpoint, organizationID)
 
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return err
-    }
+	data := map[string]interface{}{
+		"id":           userID,
+		"disassociate": true,
+	}
 
-    resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
-    if err != nil {
-        return err
-    }
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
 
-    return CheckResponse(resp)
+	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result.Results, nil
 }
 
 // IsOrganizationAdmin checks if a specific user is an admin of the organization
-func (p *OrganizationsService) IsOrganizationAdmin(organizationID int, userID int) (bool, error) {
-    admins, err := p.ListOrganizationAdmins(organizationID, nil)
-    if err != nil {
-        return false, err
-    }
+func (o *OrganizationsService) IsOrganizationAdmin(organizationID int, userID int) (bool, error) {
+	admins, err := o.ListOrganizationAdmins(organizationID, nil)
+	if err != nil {
+		return false, err
+	}
 
-    for _, admin := range admins {
-        if admin.ID == userID {
-            return true, nil
-        }
-    }
+	for _, admin := range admins {
+		if admin.ID == userID {
+			return true, nil
+		}
+	}
 
-    return false, nil
+	return false, nil
 }

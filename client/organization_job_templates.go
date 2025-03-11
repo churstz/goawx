@@ -1,134 +1,101 @@
 package awx
 
 import (
-    "bytes"
-    "encoding/json"
-    "fmt"
+	"bytes"
+	"encoding/json"
+	"fmt"
 )
 
+const organizationJobTemplatesAPIEndpoint = "/api/v2/organizations/%d/job_templates/"
+
 // OrganizationJobTemplateResponse represents the job templates list response
-type OrganizationJobTemplateResponse struct {
-    Pagination
-    Results []*JobTemplate `json:"results"` // Using the base JobTemplate type since the response matches
-}
+type OrganizationJobTemplateResponse = PaginatedResponse[JobTemplate]
 
 // ListOrganizationJobTemplates shows list of job templates in an organization.
-func (p *OrganizationsService) ListOrganizationJobTemplates(id int, params map[string]string) ([]*JobTemplate, error) {
-    result := new(OrganizationJobTemplateResponse)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/", id)
-    
-    resp, err := p.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+func (o *OrganizationsService) ListOrganizationJobTemplates(id int, params map[string]string) ([]*JobTemplate, error) {
+	result := new(OrganizationJobTemplateResponse)
+	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, id)
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	resp, err := o.client.Requester.GetJSON(endpoint, result, params)
+	if err != nil {
+		return nil, err
+	}
 
-    return result.Results, nil
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
+
+	return result.Results, nil
 }
 
 // CreateOrganizationJobTemplate creates a job template in the specified organization.
-func (p *OrganizationsService) CreateOrganizationJobTemplate(id int, data map[string]interface{}, params map[string]string) (*JobTemplate, error) {
-    mandatoryFields := []string{"name", "job_type", "inventory", "project"}
-    validate, status := ValidateParams(data, mandatoryFields)
-    if !status {
-        err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
-        return nil, err
-    }
+func (o *OrganizationsService) CreateOrganizationJobTemplate(id int, data map[string]interface{}, params map[string]string) (*JobTemplate, error) {
+	mandatoryFields := []string{"name", "job_type", "inventory", "project"}
+	validate, status := ValidateParams(data, mandatoryFields)
+	if !status {
+		err := fmt.Errorf("mandatory input arguments are absent: %s", validate)
+		return nil, err
+	}
 
-    // Ensure the organization field is set to the correct ID
-    data["organization"] = id
+	// Ensure the organization field is set to the correct ID
+	data["organization"] = id
 
-    result := new(JobTemplate)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/", id)
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return nil, err
-    }
+	result := new(JobTemplate)
+	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, id)
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
 
-    resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, params)
-    if err != nil {
-        return nil, err
-    }
+	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, params)
+	if err != nil {
+		return nil, err
+	}
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	if err := CheckResponse(resp); err != nil {
+		return nil, err
+	}
 
-    return result, nil
+	return result, nil
 }
 
-// GetOrganizationJobTemplate retrieves a specific job template in the organization
-func (p *OrganizationsService) GetOrganizationJobTemplate(organizationID int, templateID int, params map[string]string) (*JobTemplate, error) {
-    result := new(JobTemplate)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/%d/", organizationID, templateID)
-    
-    resp, err := p.client.Requester.GetJSON(endpoint, result, params)
-    if err != nil {
-        return nil, err
-    }
+// AssociateJobTemplateWithOrganization associates an existing job template with an organization
+func (o *OrganizationsService) AssociateJobTemplateWithOrganization(organizationID int, templateID int) error {
+	data := map[string]interface{}{
+		"id": templateID,
+	}
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
 
-    return result, nil
+	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, organizationID)
+	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
+	if err != nil {
+		return err
+	}
+
+	return CheckResponse(resp)
 }
 
-// UpdateOrganizationJobTemplate updates a job template in the organization
-func (p *OrganizationsService) UpdateOrganizationJobTemplate(organizationID int, templateID int, data map[string]interface{}, params map[string]string) (*JobTemplate, error) {
-    result := new(JobTemplate)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/%d/", organizationID, templateID)
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return nil, err
-    }
+// DisassociateJobTemplateFromOrganization removes a job template's association with an organization
+func (o *OrganizationsService) DisassociateJobTemplateFromOrganization(organizationID int, templateID int) error {
+	data := map[string]interface{}{
+		"id":           templateID,
+		"disassociate": true,
+	}
 
-    resp, err := p.client.Requester.PatchJSON(endpoint, bytes.NewReader(payload), result, params)
-    if err != nil {
-        return nil, err
-    }
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
 
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
+	endpoint := fmt.Sprintf(organizationJobTemplatesAPIEndpoint, organizationID)
+	resp, err := o.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), nil, nil)
+	if err != nil {
+		return err
+	}
 
-    return result, nil
-}
-
-// DeleteOrganizationJobTemplate removes a job template from the organization
-func (p *OrganizationsService) DeleteOrganizationJobTemplate(organizationID int, templateID int) error {
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/%d/", organizationID, templateID)
-    
-    resp, err := p.client.Requester.Delete(endpoint, nil, nil)
-    if err != nil {
-        return err
-    }
-
-    return CheckResponse(resp)
-}
-
-// LaunchOrganizationJobTemplate launches a job with the organization's job template
-func (p *OrganizationsService) LaunchOrganizationJobTemplate(organizationID int, templateID int, data map[string]interface{}, params map[string]string) (*JobLaunch, error) {
-    result := new(JobLaunch)
-    endpoint := fmt.Sprintf("/api/v2/organizations/%d/job_templates/%d/launch/", organizationID, templateID)
-    
-    payload, err := json.Marshal(data)
-    if err != nil {
-        return nil, err
-    }
-
-    resp, err := p.client.Requester.PostJSON(endpoint, bytes.NewReader(payload), result, params)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := CheckResponse(resp); err != nil {
-        return nil, err
-    }
-
-    return result, nil
+	return CheckResponse(resp)
 }
